@@ -1,0 +1,120 @@
+.instructions-container {
+  max-width: 700px;
+  margin: 50px auto;
+  padding: 30px;
+  border-radius: 15px;
+  background: linear-gradient(135deg, var(--bg-color) 0%, var(--header-bg) 100%);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  color: var(--text-color);
+  transition: all 0.3s ease;
+  animation: slideIn 0.5s ease-in;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.instructions-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 30px;
+  padding: 15px;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+  border-radius: 10px;
+  color: white;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: white;
+  margin-right: 15px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: transform 0.2s;
+}
+
+.back-btn:hover {
+  transform: scale(1.1);
+}
+
+.instructions-header h1 {
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.instructions-main {
+  text-align: center;
+}
+
+.instructions-main > p {
+  margin-bottom: 25px;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.warning-section, .rules-section {
+  margin-bottom: 30px;
+  padding: 20px;
+  border-radius: 10px;
+  background-color: var(--input-bg);
+  border-left: 5px solid #ff6b6b;
+}
+
+.warning-section h2, .rules-section h2 {
+  color: #ff6b6b;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.warning-section ul, .rules-section ol {
+  text-align: left;
+  list-style-position: inside;
+  padding-left: 20px;
+}
+
+.warning-section li, .rules-section li {
+  margin-bottom: 10px;
+  line-height: 1.5;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.warning-section li strong {
+  color: var(--btn-bg);
+}
+
+.start-btn {
+  padding: 15px 30px;
+  background: linear-gradient(135deg, var(--btn-bg) 0%, var(--btn-hover) 100%);
+  color: white;
+  border: none;
+  border-radius: 25px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 auto;
+  box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+}
+
+.start-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
+}
+
+.start-btn:active {
+  transform: translateY(0);
+}
