@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import './AdminPanelView.css';
+import { fetchExamSessions, upsertExamSession } from './supabaseApi';
 
-const ADMIN_SESSIONS_KEY = 'itcenter-admin-sessions';
 const ADMIN_CONTROL_KEY = 'itcenter-admin-control';
 const ADMIN_CREDENTIALS_KEY = 'itcenter-admin-credentials';
 const ADMIN_AUTH_SESSION_KEY = 'itcenter-admin-auth-session';
@@ -27,11 +27,6 @@ const readJson = (key, fallback) => {
   }
 };
 
-const readSessions = () => {
-  const parsed = readJson(ADMIN_SESSIONS_KEY, []);
-  return Array.isArray(parsed) ? parsed : [];
-};
-
 const readCredentials = () => {
   const stored = readJson(ADMIN_CREDENTIALS_KEY, null);
 
@@ -54,7 +49,7 @@ const statusLabels = {
 };
 
 function AdminPanelView() {
-  const [sessions, setSessions] = useState(() => readSessions());
+  const [sessions, setSessions] = useState([]);
   const [credentials, setCredentials] = useState(() => readCredentials());
   const [isAuthenticated, setIsAuthenticated] = useState(() => readJson(ADMIN_AUTH_SESSION_KEY, false) === true);
   const [loginForm, setLoginForm] = useState({ login: '', password: '' });
@@ -69,16 +64,35 @@ function AdminPanelView() {
   const [resetMessage, setResetMessage] = useState('');
 
   useEffect(() => {
-    const syncSessions = () => {
-      setSessions(readSessions());
+    const syncSessions = async () => {
+      try {
+        const remoteSessions = await fetchExamSessions();
+        setSessions(
+          remoteSessions.map((item) => ({
+            identity: item.identity_key,
+            name: item.name,
+            surname: item.surname,
+            phone: item.phone,
+            status: item.status,
+            score: item.score,
+            totalQuestions: item.total_questions,
+            reason: item.reason,
+            createdAt: item.created_at,
+            updatedAt: item.updated_at,
+            startedAt: item.started_at,
+            finishedAt: item.finished_at,
+          }))
+        );
+      } catch (error) {
+        console.error('Failed to fetch sessions from Supabase:', error);
+      }
     };
 
+    syncSessions();
     const intervalId = window.setInterval(syncSessions, 1200);
-    window.addEventListener('storage', syncSessions);
 
     return () => {
       window.clearInterval(intervalId);
-      window.removeEventListener('storage', syncSessions);
     };
   }, []);
 
@@ -110,6 +124,12 @@ function AdminPanelView() {
       })
     );
 
+    const currentSession = sessions.find((item) => item.identity === identity);
+
+    if (!currentSession) {
+      return;
+    }
+
     setSessions((current) =>
       current.map((item) =>
         item.identity === identity
@@ -123,6 +143,23 @@ function AdminPanelView() {
           : item
       )
     );
+
+    upsertExamSession({
+      identity_key: currentSession.identity,
+      name: currentSession.name,
+      surname: currentSession.surname,
+      phone: currentSession.phone || null,
+      status: 'force_ended',
+      score: typeof currentSession.score === 'number' ? currentSession.score : null,
+      total_questions: typeof currentSession.totalQuestions === 'number' ? currentSession.totalQuestions : null,
+      reason: 'Admin tomonidan imtihon yakunlandi.',
+      created_at: currentSession.createdAt,
+      updated_at: new Date().toISOString(),
+      started_at: currentSession.startedAt || null,
+      finished_at: new Date().toISOString(),
+    }).catch((error) => {
+      console.error('Failed to update session in Supabase:', error);
+    });
   };
 
   const handleLoginSubmit = (event) => {

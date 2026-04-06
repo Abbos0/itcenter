@@ -6,6 +6,7 @@ import Instructions from './Instructions';
 import Exam from './Exam';
 import AdminPanelView from './AdminPanelView';
 import './App.css';
+import { fetchExamSessionByIdentity, upsertExamSession } from './supabaseApi';
 
 const EXAM_SESSION_KEY = 'itcenter-exam-session';
 const USED_IDENTITIES_KEY = 'itcenter-used-identities';
@@ -66,6 +67,31 @@ function App() {
     return normalizeIdentity(user);
   }, [user]);
 
+  const syncRemoteExamSession = async (identity, payload) => {
+    if (!identity) {
+      return;
+    }
+
+    try {
+      await upsertExamSession({
+        identity_key: identity,
+        name: payload.name || '',
+        surname: payload.surname || '',
+        phone: payload.phone || null,
+        status: payload.status || 'login',
+        score: typeof payload.score === 'number' ? payload.score : null,
+        total_questions: typeof payload.totalQuestions === 'number' ? payload.totalQuestions : null,
+        reason: payload.reason || null,
+        created_at: payload.createdAt || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        started_at: payload.startedAt || null,
+        finished_at: payload.finishedAt || null,
+      });
+    } catch (error) {
+      console.error('Failed to sync exam session to Supabase:', error);
+    }
+  };
+
   const upsertAdminSession = (identity, payload) => {
     if (!identity) {
       return;
@@ -98,6 +124,7 @@ function App() {
     }
 
     localStorage.setItem(ADMIN_SESSIONS_KEY, JSON.stringify(nextSessions));
+    syncRemoteExamSession(identity, nextEntry);
   };
 
   useEffect(() => {
@@ -235,6 +262,36 @@ function App() {
       window.removeEventListener('storage', handleAdminControl);
     };
   }, [currentIdentity, examSession, user]);
+
+  useEffect(() => {
+    if (!currentIdentity || !user || step !== 'exam') {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(async () => {
+      try {
+        const remoteSession = await fetchExamSessionByIdentity(currentIdentity);
+
+        if (remoteSession?.status === 'force_ended' || remoteSession?.status === 'terminated') {
+          const nextState = {
+            ...examSession,
+            status: 'terminated',
+            reason: remoteSession.reason || "Admin tomonidan imtihon yakunlandi.",
+            finishedAt: remoteSession.finished_at || new Date().toISOString(),
+          };
+
+          setExamSession(nextState);
+          setStep('blocked');
+        }
+      } catch (error) {
+        console.error('Failed to poll remote exam session:', error);
+      }
+    }, 2500);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [currentIdentity, examSession, step, user]);
 
   const handleLogin = (userData) => {
     if (examSession.status !== 'idle') {
