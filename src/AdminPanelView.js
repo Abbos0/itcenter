@@ -147,6 +147,7 @@ function AdminPanelView() {
       )
     );
 
+    
     upsertExamSession({
       identity_key: currentSession.identity,
       name: currentSession.name,
