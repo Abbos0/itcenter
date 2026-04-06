@@ -44,9 +44,12 @@ const statusLabels = {
   instructions: "Ko'rsatmada",
   in_progress: 'Testda',
   completed: 'Yakunlangan',
+  blocked: 'Bloklangan',
   terminated: "To'xtatilgan",
   force_ended: 'Admin tugatgan',
 };
+
+const deletableStatuses = new Set(['completed', 'blocked', 'terminated', 'force_ended']);
 
 function AdminPanelView() {
   const [sessions, setSessions] = useState([]);
@@ -166,6 +169,11 @@ function AdminPanelView() {
     const currentSession = sessions.find((item) => item.identity === identity);
 
     if (!currentSession) {
+      return;
+    }
+
+    if (!deletableStatuses.has(currentSession.status)) {
+      window.alert("Aktiv qatnashuvchini o'chirib bo'lmaydi. Avval testni yakunlang.");
       return;
     }
 
@@ -449,9 +457,13 @@ function AdminPanelView() {
                           ) : (
                             <span className="admin-muted">Amal yo&apos;q</span>
                           )}
-                          <button className="admin-delete" type="button" onClick={() => handleDelete(item.identity)}>
-                            Delete
-                          </button>
+                          {deletableStatuses.has(item.status) ? (
+                            <button className="admin-delete" type="button" onClick={() => handleDelete(item.identity)}>
+                              Delete
+                            </button>
+                          ) : (
+                            <span className="admin-muted">Delete yopiq</span>
+                          )}
                         </div>
                       </td>
                   </tr>
