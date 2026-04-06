@@ -23,7 +23,11 @@ const Login = ({ onLogin }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (name && surname) {
-      onLogin({ name, surname });
+      const result = onLogin({ name, surname });
+
+      if (result?.ok === false) {
+        alert(result.message);
+      }
     } else {
       alert('Iltimos, ism va familiyani kiriting.');
     }
