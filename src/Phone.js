@@ -113,7 +113,7 @@ const Phone = ({ user, onNext }) => {
 
   const handleCodeSubmit = (e) => {
     e.preventDefault();
-    if (code === generatedCode) onNext();
+    if (code === generatedCode) onNext(`+998${phone}`);
     else setError("SMS kod noto'g'ri");
   };
 
