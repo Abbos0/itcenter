@@ -104,6 +104,24 @@ body {
   font-weight: 800;
 }
 
+.lock-card__reset {
+  margin-top: 20px;
+  padding: 14px 22px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--btn-bg), var(--btn-hover));
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 16px 28px rgba(194, 91, 46, 0.28);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.lock-card__reset:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 34px rgba(194, 91, 46, 0.32);
+}
+
 @media (max-width: 768px) {
   .lock-card {
     padding: 28px 22px;

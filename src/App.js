@@ -184,6 +184,13 @@ function App() {
     setStep('blocked');
   };
 
+  const handleResetSession = () => {
+    localStorage.removeItem(EXAM_SESSION_KEY);
+    setExamSession({ status: 'idle' });
+    setUser(null);
+    setStep('login');
+  };
+
   if (step === 'blocked' || examSession.status === 'completed' || examSession.status === 'terminated') {
     return (
       <div className="App">
@@ -202,6 +209,9 @@ function App() {
             <p className="lock-card__hint">
               Imtihon tugaganidan keyin tizimga qayta kirish bloklanadi.
             </p>
+            <button className="lock-card__reset" onClick={handleResetSession} type="button">
+              Qayta boshlash
+            </button>
           </section>
         </main>
       </div>
