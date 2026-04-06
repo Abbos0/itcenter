@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Login from './Login';
 import Face from './Face';
 import Phone from './Phone';
@@ -67,7 +67,7 @@ function App() {
     return normalizeIdentity(user);
   }, [user]);
 
-  const syncRemoteExamSession = async (identity, payload) => {
+  const syncRemoteExamSession = useCallback(async (identity, payload) => {
     if (!identity) {
       return;
     }
@@ -90,9 +90,9 @@ function App() {
     } catch (error) {
       console.error('Failed to sync exam session to Supabase:', error);
     }
-  };
+  }, []);
 
-  const upsertAdminSession = (identity, payload) => {
+  const upsertAdminSession = useCallback((identity, payload) => {
     if (!identity) {
       return;
     }
@@ -125,7 +125,7 @@ function App() {
 
     localStorage.setItem(ADMIN_SESSIONS_KEY, JSON.stringify(nextSessions));
     syncRemoteExamSession(identity, nextEntry);
-  };
+  }, [syncRemoteExamSession]);
 
   useEffect(() => {
     localStorage.setItem(EXAM_SESSION_KEY, JSON.stringify(examSession));
@@ -151,7 +151,7 @@ function App() {
       startedAt: examSession.startedAt ?? null,
       finishedAt: examSession.finishedAt ?? null,
     });
-  }, [currentIdentity, examSession, step, user]);
+  }, [currentIdentity, examSession, step, upsertAdminSession, user]);
 
   useEffect(() => {
     if (step === 'login') {
@@ -189,7 +189,7 @@ function App() {
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [currentIdentity, examSession, step, user]);
+  }, [currentIdentity, examSession, step, upsertAdminSession, user]);
 
   useEffect(() => {
     const handleBeforeUnload = () => {
@@ -224,7 +224,7 @@ function App() {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [currentIdentity, user]);
+  }, [currentIdentity, upsertAdminSession, user]);
 
   useEffect(() => {
     const handleAdminControl = (event) => {
@@ -261,7 +261,7 @@ function App() {
     return () => {
       window.removeEventListener('storage', handleAdminControl);
     };
-  }, [currentIdentity, examSession, user]);
+  }, [currentIdentity, examSession, upsertAdminSession, user]);
 
   useEffect(() => {
     if (!currentIdentity || !user || step !== 'exam') {

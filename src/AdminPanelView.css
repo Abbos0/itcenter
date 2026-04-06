@@ -235,6 +235,23 @@
   cursor: pointer;
 }
 
+.admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-delete {
+  border: none;
+  border-radius: 12px;
+  background: rgba(31, 41, 55, 0.12);
+  color: var(--text-color);
+  padding: 10px 14px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .admin-empty {
   padding: 24px 0 4px;
 }

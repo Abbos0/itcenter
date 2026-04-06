@@ -46,3 +46,11 @@ export const fetchExamSessionByIdentity = async (identityKey) => {
 
   return Array.isArray(data) && data.length ? data[0] : null;
 };
+
+export const deleteExamSessionByIdentity = async (identityKey) =>
+  request(`?identity_key=eq.${encodeURIComponent(identityKey)}`, {
+    method: 'DELETE',
+    headers: {
+      Prefer: 'return=minimal',
+    },
+  });

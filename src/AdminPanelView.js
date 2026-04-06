@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import './AdminPanelView.css';
-import { fetchExamSessions, upsertExamSession } from './supabaseApi';
+import { deleteExamSessionByIdentity, fetchExamSessions, upsertExamSession } from './supabaseApi';
 
 const ADMIN_CONTROL_KEY = 'itcenter-admin-control';
 const ADMIN_CREDENTIALS_KEY = 'itcenter-admin-credentials';
@@ -160,6 +160,30 @@ function AdminPanelView() {
     }).catch((error) => {
       console.error('Failed to update session in Supabase:', error);
     });
+  };
+
+  const handleDelete = async (identity) => {
+    const currentSession = sessions.find((item) => item.identity === identity);
+
+    if (!currentSession) {
+      return;
+    }
+
+    const shouldDelete = window.confirm(
+      `${currentSession.name} ${currentSession.surname} yozuvini bazadan o'chirmoqchimisiz?`
+    );
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    try {
+      await deleteExamSessionByIdentity(identity);
+      setSessions((current) => current.filter((item) => item.identity !== identity));
+    } catch (error) {
+      console.error('Failed to delete session from Supabase:', error);
+      window.alert("Yozuvni o'chirib bo'lmadi. Supabase delete policy tekshiring.");
+    }
   };
 
   const handleLoginSubmit = (event) => {
@@ -416,15 +440,20 @@ function AdminPanelView() {
                         : '-'}
                     </td>
                     <td>{item.updatedAt ? new Date(item.updatedAt).toLocaleString() : '-'}</td>
-                    <td>
-                      {item.status === 'in_progress' ? (
-                        <button className="admin-danger" type="button" onClick={() => handleTerminate(item.identity)}>
-                          Yakunlash
-                        </button>
-                      ) : (
-                        <span className="admin-muted">Amal yo&apos;q</span>
-                      )}
-                    </td>
+                      <td>
+                        <div className="admin-actions">
+                          {item.status === 'in_progress' ? (
+                            <button className="admin-danger" type="button" onClick={() => handleTerminate(item.identity)}>
+                              Yakunlash
+                            </button>
+                          ) : (
+                            <span className="admin-muted">Amal yo&apos;q</span>
+                          )}
+                          <button className="admin-delete" type="button" onClick={() => handleDelete(item.identity)}>
+                            Delete
+                          </button>
+                        </div>
+                      </td>
                   </tr>
                 ))}
               </tbody>
