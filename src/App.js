@@ -14,6 +14,7 @@ function App() {
   const [examSession, setExamSession] = useState(() => {
     const savedSession = localStorage.getItem(EXAM_SESSION_KEY);
 
+    
     if (!savedSession) {
       return { status: 'idle' };
     }
