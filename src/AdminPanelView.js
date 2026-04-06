@@ -186,6 +186,14 @@ function AdminPanelView() {
     }
 
     try {
+      localStorage.setItem(
+        ADMIN_CONTROL_KEY,
+        JSON.stringify({
+          action: 'delete',
+          identity,
+          issuedAt: new Date().toISOString(),
+        })
+      );
       await deleteExamSessionByIdentity(identity);
       setSessions((current) => current.filter((item) => item.identity !== identity));
     } catch (error) {

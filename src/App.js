@@ -12,6 +12,7 @@ const EXAM_SESSION_KEY = 'itcenter-exam-session';
 const USED_IDENTITIES_KEY = 'itcenter-used-identities';
 const ADMIN_SESSIONS_KEY = 'itcenter-admin-sessions';
 const ADMIN_CONTROL_KEY = 'itcenter-admin-control';
+const DELETED_IDENTITIES_KEY = 'itcenter-deleted-identities';
 
 const normalizeIdentity = ({ name = '', surname = '' }) =>
   `${name.trim().toLocaleLowerCase()}::${surname.trim().toLocaleLowerCase()}`;
@@ -58,6 +59,10 @@ function App() {
 
     return [];
   });
+  const [deletedIdentities, setDeletedIdentities] = useState(() => {
+    const saved = readJson(DELETED_IDENTITIES_KEY, []);
+    return Array.isArray(saved) ? saved : [];
+  });
 
   const currentIdentity = useMemo(() => {
     if (!user?.name || !user?.surname) {
@@ -68,7 +73,7 @@ function App() {
   }, [user]);
 
   const syncRemoteExamSession = useCallback(async (identity, payload) => {
-    if (!identity) {
+    if (!identity || deletedIdentities.includes(identity)) {
       return;
     }
 
@@ -90,10 +95,10 @@ function App() {
     } catch (error) {
       console.error('Failed to sync exam session to Supabase:', error);
     }
-  }, []);
+  }, [deletedIdentities]);
 
   const upsertAdminSession = useCallback((identity, payload) => {
-    if (!identity) {
+    if (!identity || deletedIdentities.includes(identity)) {
       return;
     }
 
@@ -125,7 +130,7 @@ function App() {
 
     localStorage.setItem(ADMIN_SESSIONS_KEY, JSON.stringify(nextSessions));
     syncRemoteExamSession(identity, nextEntry);
-  }, [syncRemoteExamSession]);
+  }, [deletedIdentities, syncRemoteExamSession]);
 
   useEffect(() => {
     localStorage.setItem(EXAM_SESSION_KEY, JSON.stringify(examSession));
@@ -134,6 +139,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem(USED_IDENTITIES_KEY, JSON.stringify(usedIdentities));
   }, [usedIdentities]);
+
+  useEffect(() => {
+    localStorage.setItem(DELETED_IDENTITIES_KEY, JSON.stringify(deletedIdentities));
+  }, [deletedIdentities]);
 
   useEffect(() => {
     if (!currentIdentity || !user) {
@@ -253,6 +262,14 @@ function App() {
           finishedAt: nextState.finishedAt,
         });
         setStep('blocked');
+      }
+
+      if (control?.action === 'delete' && control.identity === currentIdentity) {
+        setDeletedIdentities((current) => (current.includes(currentIdentity) ? current : [...current, currentIdentity]));
+        localStorage.removeItem(EXAM_SESSION_KEY);
+        setExamSession({ status: 'idle' });
+        setUser(null);
+        setStep('login');
       }
     };
 
