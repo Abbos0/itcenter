@@ -331,7 +331,7 @@ function App() {
   if (step === 'blocked' || examSession.status === 'completed' || examSession.status === 'terminated') {
     return (
       <div className="App">
-        <a className="admin-entry" href="/admin-panel/" target="_blank" rel="noreferrer">
+        <a className="admin-entry" href="https://itcenter-admin.vercel.app" target="_blank" rel="noreferrer">
           Admin
         </a>
         <main className="lock-screen">
@@ -360,7 +360,7 @@ function App() {
 
   return (
     <div className="App">
-      <a className="admin-entry" href="/admin-panel/" target="_blank" rel="noreferrer">
+      <a className="admin-entry" href="https://itcenter-admin.vercel.app" target="_blank" rel="noreferrer">
         Admin
       </a>
       {step === 'login' && <Login onLogin={handleLogin} />}
