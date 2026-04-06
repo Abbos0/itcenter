@@ -1,0 +1,269 @@
+.admin-auth,
+.admin-view {
+  min-height: 100vh;
+  padding: 28px;
+  color: var(--text-color);
+}
+
+.admin-view__back,
+.admin-view__logout {
+  position: fixed;
+  top: 18px;
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: rgba(18, 34, 27, 0.88);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 800;
+}
+
+.admin-view__back {
+  right: 18px;
+}
+
+.admin-view__logout {
+  right: 152px;
+  border: none;
+  cursor: pointer;
+}
+
+.admin-auth {
+  display: grid;
+  place-items: center;
+}
+
+.admin-auth__card,
+.admin-view__hero,
+.admin-table-card,
+.admin-stat {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 28px;
+  background: var(--surface-strong);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow-soft);
+}
+
+.admin-auth__card {
+  width: min(520px, 100%);
+  padding: 32px;
+}
+
+.admin-view__hero,
+.admin-table-card {
+  padding: 28px;
+}
+
+.admin-view__eyebrow {
+  margin: 0 0 8px;
+  color: var(--btn-bg);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.admin-view h1,
+.admin-auth h1,
+.admin-table-card h2,
+.admin-empty h3 {
+  margin: 0;
+}
+
+.admin-auth__copy,
+.admin-view__hero p:last-child,
+.admin-table-card__head p,
+.admin-empty p,
+.admin-muted {
+  color: var(--muted-text);
+}
+
+.admin-auth__form {
+  margin-top: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.admin-auth__form label {
+  display: grid;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.admin-auth__form input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--text-color);
+  font: inherit;
+}
+
+.admin-auth__submit,
+.admin-reset__toggle {
+  border: none;
+  border-radius: 14px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, var(--btn-bg), var(--btn-hover));
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.admin-reset {
+  margin-top: 18px;
+}
+
+.admin-reset__toggle {
+  width: 100%;
+}
+
+.admin-auth__error {
+  margin: 0;
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.admin-auth__hint,
+.admin-auth__defaults p {
+  margin: 12px 0 0;
+  color: var(--muted-text);
+}
+
+.admin-auth__defaults {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(31, 41, 55, 0.1);
+}
+
+.admin-view__stats {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.admin-stat {
+  padding: 22px;
+}
+
+.admin-stat p {
+  margin: 0 0 10px;
+  color: var(--muted-text);
+}
+
+.admin-stat strong {
+  font-size: 32px;
+  color: var(--btn-bg);
+}
+
+.admin-table-card {
+  margin-top: 20px;
+}
+
+.admin-table-card__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+
+.admin-table-wrap {
+  overflow-x: auto;
+  margin-top: 18px;
+}
+
+.admin-table {
+  width: 100%;
+  min-width: 920px;
+  border-collapse: collapse;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 14px 10px;
+  text-align: left;
+  border-bottom: 1px solid rgba(31, 41, 55, 0.09);
+  vertical-align: middle;
+}
+
+.admin-table th {
+  color: var(--muted-text);
+  font-size: 14px;
+}
+
+.admin-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(194, 91, 46, 0.12);
+  color: var(--btn-bg);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-status--in_progress {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2558b8;
+}
+
+.admin-status--completed {
+  background: rgba(31, 122, 69, 0.12);
+  color: var(--success);
+}
+
+.admin-status--terminated,
+.admin-status--force_ended {
+  background: rgba(207, 47, 69, 0.12);
+  color: var(--danger);
+}
+
+.admin-danger {
+  border: none;
+  border-radius: 12px;
+  background: var(--danger);
+  color: #fff;
+  padding: 10px 14px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-empty {
+  padding: 24px 0 4px;
+}
+
+@media (max-width: 960px) {
+  .admin-view {
+    padding: 20px;
+  }
+
+  .admin-view__stats {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-view__back,
+  .admin-view__logout {
+    top: 14px;
+  }
+
+  .admin-view__back {
+    right: 14px;
+  }
+
+  .admin-view__logout {
+    right: 136px;
+  }
+
+  .admin-view__stats {
+    grid-template-columns: 1fr;
+  }
+}

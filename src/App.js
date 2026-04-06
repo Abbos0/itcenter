@@ -4,6 +4,7 @@ import Face from './Face';
 import Phone from './Phone';
 import Instructions from './Instructions';
 import Exam from './Exam';
+import AdminPanelView from './AdminPanelView';
 import './App.css';
 
 const EXAM_SESSION_KEY = 'itcenter-exam-session';
@@ -29,6 +30,7 @@ const readJson = (key, fallback) => {
 };
 
 function App() {
+  const isAdminView = new URLSearchParams(window.location.search).get('admin') === '1';
   const [user, setUser] = useState(null);
   const [step, setStep] = useState('login');
   const [examSession, setExamSession] = useState(() => {
@@ -328,12 +330,17 @@ function App() {
     setStep('login');
   };
 
+  if (isAdminView) {
+    return (
+      <div className="App">
+        <AdminPanelView />
+      </div>
+    );
+  }
+
   if (step === 'blocked' || examSession.status === 'completed' || examSession.status === 'terminated') {
     return (
       <div className="App">
-        <a className="admin-entry" href="https://itcenter-admin.vercel.app" target="_blank" rel="noreferrer">
-          Admin
-        </a>
         <main className="lock-screen">
           <section className="lock-card">
             <p className="lock-card__eyebrow">Imtihon holati</p>
@@ -360,9 +367,11 @@ function App() {
 
   return (
     <div className="App">
-      <a className="admin-entry" href="https://itcenter-admin.vercel.app" target="_blank" rel="noreferrer">
-        Admin
-      </a>
+      {step === 'login' ? (
+        <a className="admin-entry" href="/?admin=1">
+          Admin
+        </a>
+      ) : null}
       {step === 'login' && <Login onLogin={handleLogin} />}
       {step === 'face' && <Face user={user} onNext={handleFaceNext} />}
       {step === 'phone' && <Phone user={user} onNext={handlePhoneNext} />}
