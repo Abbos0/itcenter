@@ -32,7 +32,9 @@ const Login = ({ onLogin }) => {
   return (
     <div className="login-container">
       <header className="login-header">
-        <h1><FaUser /> Imtihon Sayti</h1>
+        <div className="login-header__content">
+          <p className="login-warning">Testdan chiqib ketish taqiqlanadi</p>
+        </div>
         <button className="theme-toggle" onClick={toggleTheme}>
           {theme === 'light' ? <FaMoon /> : <FaSun />}
         </button>

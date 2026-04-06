@@ -1,82 +1,162 @@
 .face-container {
-  max-width: 600px;
-  margin: 50px auto;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  background-color: var(--bg-color);
-  color: var(--text-color);
-  transition: background-color 0.3s, color 0.3s;
+  width: min(760px, calc(100% - 32px));
+  margin: 42px auto;
+  padding: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  border-radius: 32px;
+  background: var(--surface);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-soft);
 }
 
 .face-header {
   display: flex;
-  align-items: center;
-  margin-bottom: 20px;
-  padding: 10px;
-  background-color: var(--header-bg);
-  border-radius: 8px;
-}
-
-.back-btn {
-  background: none;
-  border: none;
-  font-size: 1.2rem;
-  cursor: pointer;
-  color: var(--text-color);
-  margin-right: 10px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.back-btn:hover {
-  color: var(--btn-bg);
+  justify-content: center;
+  margin-bottom: 22px;
+  padding: 18px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(250, 238, 225, 0.92), rgba(239, 246, 251, 0.92));
 }
 
 .face-header h1 {
-  font-size: 1.5rem;
+  margin: 0;
   display: flex;
   align-items: center;
   gap: 10px;
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
 }
 
 .face-main {
   text-align: center;
 }
 
-.face-main p {
-  margin-bottom: 20px;
-  font-size: 1.1rem;
+.face-main > p:first-child {
+  margin: 0 0 8px;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.face-main > p:nth-child(2) {
+  margin: 0 auto 22px;
+  max-width: 520px;
+  color: var(--muted-text);
+  line-height: 1.7;
 }
 
 .face-placeholder {
-  margin: 20px 0;
-  padding: 40px;
-  border: 2px dashed var(--input-border);
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
+  margin: 0 0 18px;
+  padding: 22px;
+  border: 1px solid var(--input-border);
+  border-radius: 28px;
+  background: var(--surface-strong);
+  display: grid;
+  gap: 16px;
+  justify-items: center;
+}
+
+.face-webcam {
+  width: min(100%, 520px);
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: #000;
+  box-shadow: var(--shadow-strong);
+}
+
+.camera-status {
+  display: inline-flex;
   align-items: center;
   gap: 10px;
-  color: var(--text-color);
+  padding: 12px 16px;
+  border-radius: 999px;
+  background: rgba(31, 41, 55, 0.06);
+  color: var(--muted-text);
+  font-weight: 700;
+}
+
+.camera-status p {
+  margin: 0;
+}
+
+.camera-status--ready {
+  background: rgba(31, 122, 69, 0.12);
+  color: var(--success);
+}
+
+.camera-error {
+  margin: 0 auto 16px;
+  max-width: 460px;
+  color: var(--danger);
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.fallback-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  max-width: 480px;
+  margin: 0 auto 18px;
+  padding: 16px 18px;
+  border: 1px solid var(--input-border);
+  border-radius: 18px;
+  background: var(--surface-strong);
+  text-align: left;
+  cursor: pointer;
+}
+
+.fallback-check input {
+  margin-top: 4px;
+  accent-color: var(--btn-bg);
+}
+
+.fallback-check span {
+  display: flex;
+  gap: 8px;
+  line-height: 1.6;
+  font-weight: 600;
 }
 
 .next-btn {
-  padding: 12px 24px;
-  background-color: var(--btn-bg);
-  color: white;
+  padding: 15px 26px;
   border: none;
-  border-radius: 4px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background-color 0.3s;
-  display: flex;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--btn-bg), var(--btn-hover));
+  color: #fff;
+  display: inline-flex;
   align-items: center;
-  gap: 5px;
-  margin: 0 auto;
+  gap: 8px;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 16px 28px rgba(194, 91, 46, 0.28);
+  transition: transform 160ms ease, box-shadow 160ms ease;
 }
 
-.next-btn:hover {
-  background-color: var(--btn-hover);
+.next-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 34px rgba(194, 91, 46, 0.32);
+}
+
+.next-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+@media (max-width: 640px) {
+  .face-container {
+    width: calc(100% - 20px);
+    margin: 16px auto;
+    padding: 18px;
+    border-radius: 24px;
+  }
+
+  .face-placeholder {
+    padding: 14px;
+    border-radius: 20px;
+  }
+
+  .camera-status {
+    border-radius: 18px;
+  }
 }

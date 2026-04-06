@@ -88,36 +88,38 @@
 
 
 import React, { useState } from 'react';
-import { FaPhone, FaSms, FaArrowLeft, FaCheck } from 'react-icons/fa';
+import { FaPhone, FaSms, FaCheck } from 'react-icons/fa';
 import './Phone.css';
 
-const Phone = ({ user, onNext, onBack }) => {
+const Phone = ({ user, onNext }) => {
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
   const [step, setStep] = useState('phone'); // 'phone' or 'code'
   const [error, setError] = useState('');
+  const [generatedCode, setGeneratedCode] = useState('');
 
   const handlePhoneSubmit = (e) => {
     e.preventDefault();
-    if (/^9\d{8}$/.test(phone)) { // Uzbek phone format
+    if (/^\d{9}$/.test(phone)) {
+      const nextCode = `${Math.floor(1000 + Math.random() * 9000)}`;
+      setGeneratedCode(nextCode);
       setStep('code');
       setError('');
-      alert('SMS kod yuborildi: 1234');
+      setCode('');
     } else {
-      setError("Telefon raqamini to'g'ri kiriting (9xxxxxxxx)");
+      setError("Telefon raqami 9 xonali bo'lishi kerak.");
     }
   };
 
   const handleCodeSubmit = (e) => {
     e.preventDefault();
-    if (code === '1234') onNext();
-    else setError("Kod noto'g'ri");
+    if (code === generatedCode) onNext();
+    else setError("SMS kod noto'g'ri");
   };
 
   return (
     <div className="phone-container">
       <header className="phone-header">
-        <button className="back-btn" onClick={onBack}><FaArrowLeft /> Orqaga</button>
         <h1><FaPhone /> Telefon Tasdiqlash</h1>
       </header>
 
@@ -127,14 +129,14 @@ const Phone = ({ user, onNext, onBack }) => {
         {step === 'phone' ? (
           <form className="phone-form" onSubmit={handlePhoneSubmit}>
             <div className="input-group">
-              <label><FaPhone /> Telefon raqam</label>
+              <label><FaPhone /> Telefon raqamingizni kiriting</label>
               <div className="phone-input-wrapper">
                 <span className="prefix">+998</span>
                 <input
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                  placeholder="9xxxxxxxx"
+                  placeholder="901234567"
                   maxLength="9"
                   required
                 />
@@ -145,6 +147,9 @@ const Phone = ({ user, onNext, onBack }) => {
           </form>
         ) : (
           <form className="code-form" onSubmit={handleCodeSubmit}>
+            <p className="sms-note">
+              Real SMS xizmati ulanmagan. Demo kod: <strong>{generatedCode}</strong>
+            </p>
             <div className="input-group">
               <label><FaSms /> SMS kod</label>
               <input

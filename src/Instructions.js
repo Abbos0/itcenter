@@ -1,14 +1,11 @@
 import React from 'react';
-import { FaExclamationTriangle, FaArrowLeft, FaArrowRight, FaUser, FaPhone } from 'react-icons/fa';
+import { FaExclamationTriangle, FaArrowRight, FaUser, FaPhone } from 'react-icons/fa';
 import './Instructions.css';
 
-const Instructions = ({ user, onNext, onBack }) => {
+const Instructions = ({ user, onNext }) => {
   return (
     <div className="instructions-container">
       <header className="instructions-header">
-        <button className="back-btn" onClick={onBack}>
-          <FaArrowLeft /> Orqaga
-        </button>
         <h1><FaExclamationTriangle /> Ko'rsatmalar</h1>
       </header>
       <main className="instructions-main">

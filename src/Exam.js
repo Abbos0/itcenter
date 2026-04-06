@@ -152,6 +152,9 @@ import Webcam from 'react-webcam';
 import { FaClock, FaArrowRight, FaCheck } from 'react-icons/fa';
 import './Exam.css';
 
+const ANSWER_DELAY_MS = 1000;
+const WAIT_MESSAGE = 'Yuklanmoqda...';
+
 const questions = [
   { question: "1. React nima?", options: ["JavaScript kutubxonasi", "CSS ramkasi", "HTML elementi", "Server"], correct: 0 },
   { question: "2. JavaScript qaysi yil yaratilgan?", options: ["1995", "2000", "1985", "2010"], correct: 0 },
@@ -160,7 +163,7 @@ const questions = [
   { question: "5. Node.js nima?", options: ["JavaScript runtime", "CSS kutubxonasi", "HTML editor", "Database"], correct: 0 }
 ];
 
-const Exam = ({ user, onBack }) => {
+const Exam = ({ user, onFinish }) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState({});
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes
@@ -171,9 +174,13 @@ const Exam = ({ user, onBack }) => {
 
   const handleFinish = useCallback(() => {
     const score = Object.keys(answers).reduce((acc, q) => acc + (answers[q] === questions[q].correct ? 1 : 0), 0);
-    alert(`Imtihon tugadi! Sizning natijangiz: ${score}/${questions.length}`);
-    onBack();
-  }, [answers, onBack]);
+    alert(`Imtihon tugadi! Siz ${score} ta to'g'ri topdingiz.`);
+    onFinish({
+      reason: 'Imtihon muvaffaqiyatli yakunlandi.',
+      score,
+      totalQuestions: questions.length,
+    });
+  }, [answers, onFinish]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -195,7 +202,7 @@ const Exam = ({ user, onBack }) => {
     setSelectedAnswer(index);
     setIsAnswered(true);
     setAnswers(prev => ({ ...prev, [currentQuestion]: index }));
-    setTimeout(() => setShowNext(true), 5000);
+    setTimeout(() => setShowNext(true), ANSWER_DELAY_MS);
   };
 
   const handleNext = () => {
@@ -220,11 +227,15 @@ const Exam = ({ user, onBack }) => {
       <header className="exam-header">
         <div className="user-info"><span>{user.name} {user.surname}</span></div>
         <div className="timer"><FaClock /> {formatTime(timeLeft)}</div>
-        <button className="back-btn" onClick={onBack}>Chiqish</button>
+        <div className="exam-header__spacer" aria-hidden="true" />
       </header>
 
       <div className="exam-content">
         <div className="webcam-section">
+          <div className="webcam-section__header">
+            <h3>Kamera nazorati</h3>
+            <span className="webcam-status">Live</span>
+          </div>
           <Webcam ref={webcamRef} audio={false} screenshotFormat="image/jpeg" videoConstraints={{ width: 320, height: 240 }} className="webcam" />
           <p>Kamera: Siz ko'rinib turishingiz kerak</p>
         </div>
@@ -246,7 +257,7 @@ const Exam = ({ user, onBack }) => {
           </div>
 
           {showNext && <button className="next-btn" onClick={handleNext}><FaArrowRight /> Keyingi</button>}
-          {isAnswered && !showNext && <p className="wait-message">5 soniya kutib turing...</p>}
+          {isAnswered && !showNext && <p className="wait-message">{WAIT_MESSAGE}</p>}
         </div>
       </div>
     </div>
