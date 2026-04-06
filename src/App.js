@@ -8,13 +8,14 @@ import './App.css';
 
 const EXAM_SESSION_KEY = 'itcenter-exam-session';
 
+
 function App() {
   const [user, setUser] = useState(null);
   const [step, setStep] = useState('login');
   const [examSession, setExamSession] = useState(() => {
     const savedSession = localStorage.getItem(EXAM_SESSION_KEY);
 
-    
+
     if (!savedSession) {
       return { status: 'idle' };
     }
@@ -87,7 +88,7 @@ function App() {
           EXAM_SESSION_KEY,
           JSON.stringify({
             status: 'terminated',
-            reason: "Imtihon oynasi yopilgan. Test avtomatik yakunlandi.",
+            reason: "Imtihon oynasi yopilgan. Test avtomatik yakunlandi. ",
           })
         );
       }
@@ -144,7 +145,7 @@ function App() {
         <main className="lock-screen">
           <section className="lock-card">
             <p className="lock-card__eyebrow">Imtihon holati</p>
-            <h1>Test yakunlangan</h1>
+            <h1>Test yakunlangan .</h1>
             <p className="lock-card__copy">
               {examSession.reason || "Siz bu testni qayta topshira olmaysiz."}
             </p>
