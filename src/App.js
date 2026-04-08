@@ -6,7 +6,7 @@ import Instructions from './Instructions';
 import Exam from './Exam';
 import AdminPanelView from './AdminPanelView';
 import './App.css';
-import { fetchExamSessionByIdentity, upsertExamSession } from './supabaseApi';
+import { upsertExamSession } from './supabaseApi';
 
 const EXAM_SESSION_KEY = 'itcenter-exam-session';
 const USED_IDENTITIES_KEY = 'itcenter-used-identities';
@@ -279,36 +279,6 @@ function App() {
       window.removeEventListener('storage', handleAdminControl);
     };
   }, [currentIdentity, examSession, upsertAdminSession, user]);
-
-  useEffect(() => {
-    if (!currentIdentity || !user || step !== 'exam') {
-      return undefined;
-    }
-
-    const intervalId = window.setInterval(async () => {
-      try {
-        const remoteSession = await fetchExamSessionByIdentity(currentIdentity);
-
-        if (remoteSession?.status === 'force_ended' || remoteSession?.status === 'terminated') {
-          const nextState = {
-            ...examSession,
-            status: 'terminated',
-            reason: remoteSession.reason || "Admin tomonidan imtihon yakunlandi.",
-            finishedAt: remoteSession.finished_at || new Date().toISOString(),
-          };
-
-          setExamSession(nextState);
-          setStep('blocked');
-        }
-      } catch (error) {
-        console.error('Failed to poll remote exam session:', error);
-      }
-    }, 2500);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [currentIdentity, examSession, step, user]);
 
   const handleLogin = (userData) => {
     if (examSession.status !== 'idle') {

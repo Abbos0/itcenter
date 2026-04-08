@@ -197,6 +197,15 @@
   font-size: 14px;
 }
 
+.admin-camera-preview {
+  width: 120px;
+  height: 84px;
+  object-fit: cover;
+  border-radius: 12px;
+  background: #000;
+  border: 1px solid rgba(31, 41, 55, 0.12);
+}
+
 .admin-status {
   display: inline-flex;
   align-items: center;

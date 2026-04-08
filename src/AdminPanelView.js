@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import './AdminPanelView.css';
 import { deleteExamSessionByIdentity, fetchExamSessions, upsertExamSession } from './supabaseApi';
+import { io } from 'socket.io-client';
+import { LIVE_BACKEND_URL } from './liveBackend';
 
-const ADMIN_CONTROL_KEY = 'itcenter-admin-control';
 const ADMIN_CREDENTIALS_KEY = 'itcenter-admin-credentials';
 const ADMIN_AUTH_SESSION_KEY = 'itcenter-admin-auth-session';
 const ADMIN_RESET_KEY = 'itcenter-admin-reset';
@@ -50,9 +51,14 @@ const statusLabels = {
 };
 
 const deletableStatuses = new Set(['completed', 'blocked', 'terminated', 'force_ended']);
+const socketOptions = {
+  transports: ['polling'],
+  upgrade: false,
+};
 
 function AdminPanelView() {
   const [sessions, setSessions] = useState([]);
+  const [liveSessions, setLiveSessions] = useState([]);
   const [credentials, setCredentials] = useState(() => readCredentials());
   const [isAuthenticated, setIsAuthenticated] = useState(() => readJson(ADMIN_AUTH_SESSION_KEY, false) === true);
   const [loginForm, setLoginForm] = useState({ login: '', password: '' });
@@ -70,6 +76,7 @@ function AdminPanelView() {
     const syncSessions = async () => {
       try {
         const remoteSessions = await fetchExamSessions();
+        console.log('[admin] supabase sessions fetched', remoteSessions);
         setSessions(
           remoteSessions.map((item) => ({
             identity: item.identity_key,
@@ -99,39 +106,82 @@ function AdminPanelView() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return undefined;
+    }
+
+    const socket = io(LIVE_BACKEND_URL, socketOptions);
+
+    socket.on('live:sessions', (items) => {
+      console.log('[admin] live sessions received', items);
+      setLiveSessions(Array.isArray(items) ? items : []);
+    });
+
+    socket.on('connect', () => {
+      console.log('[admin] socket connected', { backend: LIVE_BACKEND_URL });
+    });
+
+    return () => {
+      console.log('[admin] socket disconnected');
+      socket.disconnect();
+    };
+  }, [isAuthenticated]);
+
+  const mergedSessions = useMemo(() => {
+    const merged = new Map();
+
+    sessions.forEach((item) => {
+      merged.set(item.identity, item);
+    });
+
+    liveSessions.forEach((item) => {
+      const previous = merged.get(item.identity) || {};
+      merged.set(item.identity, {
+        ...previous,
+        identity: item.identity,
+        name: item.name || previous.name || '',
+        surname: item.surname || previous.surname || '',
+        phone: item.phone || previous.phone || '',
+        status: item.status || previous.status || 'in_progress',
+        snapshot: item.snapshot || previous.snapshot || '',
+        updatedAt: item.updatedAt || previous.updatedAt || new Date().toISOString(),
+      });
+    });
+
+    return Array.from(merged.values()).sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+  }, [liveSessions, sessions]);
+
   const stats = useMemo(() => {
-    const active = sessions.filter((item) => item.status === 'in_progress').length;
-    const completed = sessions.filter((item) => item.status === 'completed').length;
-    const interrupted = sessions.filter((item) => item.status === 'terminated' || item.status === 'force_ended').length;
-    const scored = sessions.filter((item) => typeof item.score === 'number');
+    const active = mergedSessions.filter((item) => item.status === 'in_progress').length;
+    const completed = mergedSessions.filter((item) => item.status === 'completed').length;
+    const interrupted = mergedSessions.filter((item) => item.status === 'terminated' || item.status === 'force_ended').length;
+    const scored = mergedSessions.filter((item) => typeof item.score === 'number');
     const averageScore = scored.length
       ? (scored.reduce((sum, item) => sum + item.score, 0) / scored.length).toFixed(1)
       : '0.0';
 
     return {
-      total: sessions.length,
+      total: mergedSessions.length,
       active,
       completed,
       interrupted,
       averageScore,
     };
-  }, [sessions]);
+  }, [mergedSessions]);
 
   const handleTerminate = (identity) => {
-    localStorage.setItem(
-      ADMIN_CONTROL_KEY,
-      JSON.stringify({
-        action: 'terminate',
-        identity,
-        issuedAt: new Date().toISOString(),
-      })
-    );
-
-    const currentSession = sessions.find((item) => item.identity === identity);
+    const currentSession = mergedSessions.find((item) => item.identity === identity);
 
     if (!currentSession) {
+      console.log('[admin] terminate skipped, session not found', { identity });
       return;
     }
+
+    const socket = io(LIVE_BACKEND_URL, socketOptions);
+    socket.emit('admin:terminate', { identity });
+    socket.disconnect();
+    console.log('[admin] terminate emitted', { identity });
 
     setSessions((current) =>
       current.map((item) =>
@@ -167,9 +217,10 @@ function AdminPanelView() {
   };
 
   const handleDelete = async (identity) => {
-    const currentSession = sessions.find((item) => item.identity === identity);
+    const currentSession = mergedSessions.find((item) => item.identity === identity);
 
     if (!currentSession) {
+      console.log('[admin] delete skipped, session not found', { identity });
       return;
     }
 
@@ -187,16 +238,13 @@ function AdminPanelView() {
     }
 
     try {
-      localStorage.setItem(
-        ADMIN_CONTROL_KEY,
-        JSON.stringify({
-          action: 'delete',
-          identity,
-          issuedAt: new Date().toISOString(),
-        })
-      );
+      const socket = io(LIVE_BACKEND_URL, socketOptions);
+      socket.emit('admin:delete', { identity });
+      socket.disconnect();
+      console.log('[admin] delete emitted', { identity });
       await deleteExamSessionByIdentity(identity);
       setSessions((current) => current.filter((item) => item.identity !== identity));
+      setLiveSessions((current) => current.filter((item) => item.identity !== identity));
     } catch (error) {
       console.error('Failed to delete session from Supabase:', error);
       window.alert("Yozuvni o'chirib bo'lmadi. Supabase delete policy tekshiring.");
@@ -281,6 +329,8 @@ function AdminPanelView() {
             <label>
               Login
               <input
+                id="admin-login"
+                name="admin_login"
                 type="text"
                 value={loginForm.login}
                 onChange={(event) => setLoginForm((current) => ({ ...current, login: event.target.value }))}
@@ -291,6 +341,8 @@ function AdminPanelView() {
             <label>
               Parol
               <input
+                id="admin-password"
+                name="admin_password"
                 type="password"
                 value={loginForm.password}
                 onChange={(event) => setLoginForm((current) => ({ ...current, password: event.target.value }))}
@@ -314,6 +366,8 @@ function AdminPanelView() {
                 <label>
                   Admin login
                   <input
+                    id="admin-reset-login"
+                    name="admin_reset_login"
                     type="text"
                     value={resetForm.login}
                     onChange={(event) => setResetForm((current) => ({ ...current, login: event.target.value }))}
@@ -324,6 +378,8 @@ function AdminPanelView() {
                 <label>
                   Telefon raqam
                   <input
+                    id="admin-reset-phone"
+                    name="admin_reset_phone"
                     type="text"
                     value={resetForm.phone}
                     onChange={(event) => setResetForm((current) => ({ ...current, phone: event.target.value }))}
@@ -342,6 +398,8 @@ function AdminPanelView() {
                 <label>
                   SMS kod
                   <input
+                    id="admin-reset-code"
+                    name="admin_reset_code"
                     type="text"
                     value={resetForm.code}
                     onChange={(event) => setResetForm((current) => ({ ...current, code: event.target.value }))}
@@ -352,6 +410,8 @@ function AdminPanelView() {
                 <label>
                   Yangi parol
                   <input
+                    id="admin-reset-password"
+                    name="admin_reset_password"
                     type="password"
                     value={resetForm.newPassword}
                     onChange={(event) => setResetForm((current) => ({ ...current, newPassword: event.target.value }))}
@@ -422,16 +482,17 @@ function AdminPanelView() {
         <div className="admin-table-card__head">
           <div>
             <h2>Jonli qatnashuvchilar</h2>
-            <p>{sessions.length} ta yozuv</p>
+            <p>{mergedSessions.length} ta yozuv</p>
           </div>
         </div>
 
-        {sessions.length ? (
+        {mergedSessions.length ? (
           <div className="admin-table-wrap">
             <table className="admin-table">
               <thead>
                 <tr>
                   <th>Ism familiya</th>
+                  <th>Kamera</th>
                   <th>Telefon</th>
                   <th>Holat</th>
                   <th>Natija</th>
@@ -440,10 +501,17 @@ function AdminPanelView() {
                 </tr>
               </thead>
               <tbody>
-                {sessions.map((item) => (
+                {mergedSessions.map((item) => (
                   <tr key={item.identity}>
                     <td>
                       <strong>{item.name} {item.surname}</strong>
+                    </td>
+                    <td>
+                      {item.snapshot ? (
+                        <img className="admin-camera-preview" src={item.snapshot} alt={`${item.name} ${item.surname}`} />
+                      ) : (
+                        <span className="admin-muted">Kamera oqimi yo&apos;q</span>
+                      )}
                     </td>
                     <td>{item.phone || 'Kiritilmagan'}</td>
                     <td>

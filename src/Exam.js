@@ -151,6 +151,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Webcam from 'react-webcam';
 import { FaClock, FaArrowRight, FaCheck } from 'react-icons/fa';
 import './Exam.css';
+import { io } from 'socket.io-client';
+import { LIVE_BACKEND_URL } from './liveBackend';
 
 const ANSWER_DELAY_MS = 1000;
 const WAIT_MESSAGE = 'Yuklanmoqda...';
@@ -163,6 +165,47 @@ const questions = [
   { question: "5. Node.js nima?", options: ["JavaScript runtime", "CSS kutubxonasi", "HTML editor", "Database"], correct: 0 }
 ];
 
+const socketOptions = {
+  transports: ['polling'],
+  upgrade: false,
+};
+
+const normalizeIdentity = ({ name = '', surname = '' }) =>
+  `${name.trim().toLocaleLowerCase()}::${surname.trim().toLocaleLowerCase()}`;
+
+const captureFrame = (webcamRef) => {
+  const directScreenshot = webcamRef.current?.getScreenshot?.();
+
+  if (directScreenshot) {
+    return directScreenshot;
+  }
+
+  const video = webcamRef.current?.video || document.querySelector('.webcam');
+
+  if (!video || video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
+    console.log('[exam] video not ready for capture', {
+      hasVideo: Boolean(video),
+      readyState: video?.readyState ?? null,
+      width: video?.videoWidth ?? 0,
+      height: video?.videoHeight ?? 0,
+    });
+    return '';
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  const context = canvas.getContext('2d');
+
+  if (!context) {
+    return '';
+  }
+
+  context.drawImage(video, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL('image/jpeg', 0.72);
+};
+
 const Exam = ({ user, onFinish }) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState({});
@@ -170,32 +213,118 @@ const Exam = ({ user, onFinish }) => {
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [isAnswered, setIsAnswered] = useState(false);
   const [showNext, setShowNext] = useState(false);
+  const [isCameraReady, setIsCameraReady] = useState(false);
   const webcamRef = useRef(null);
+  const socketRef = useRef(null);
+  const finishedRef = useRef(false);
+  const identity = normalizeIdentity(user);
 
   const handleFinish = useCallback(() => {
+    if (finishedRef.current) {
+      return;
+    }
+
+    finishedRef.current = true;
     const score = Object.keys(answers).reduce((acc, q) => acc + (answers[q] === questions[q].correct ? 1 : 0), 0);
+    socketRef.current?.emit('participant:leave', { identity });
     alert(`Imtihon tugadi! Siz ${score} ta to'g'ri topdingiz.`);
     onFinish({
       reason: 'Imtihon muvaffaqiyatli yakunlandi.',
       score,
       totalQuestions: questions.length,
     });
-  }, [answers, onFinish]);
+  }, [answers, identity, onFinish]);
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          handleFinish();
-          return 0;
-        }
-        return prev - 1;
-      });
+      setTimeLeft(prev => Math.max(prev - 1, 0));
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [handleFinish]);
+  }, []);
+
+  useEffect(() => {
+    if (timeLeft === 0) {
+      handleFinish();
+    }
+  }, [handleFinish, timeLeft]);
+
+  useEffect(() => {
+    const socket = io(LIVE_BACKEND_URL, socketOptions);
+
+    socketRef.current = socket;
+
+    const basePayload = {
+      identity,
+      name: user.name,
+      surname: user.surname,
+      phone: user.phone || '',
+      status: 'in_progress',
+    };
+
+    socket.on('connect', () => {
+      console.log('[exam] socket connected', { identity, backend: LIVE_BACKEND_URL });
+      socket.emit('participant:join', basePayload);
+      console.log('[exam] participant joined', basePayload);
+    });
+
+    socket.on('control:terminate', ({ identity: targetIdentity }) => {
+      if (targetIdentity !== identity) {
+        return;
+      }
+
+      if (finishedRef.current) {
+        return;
+      }
+
+      finishedRef.current = true;
+      socket.emit('participant:leave', { identity });
+      alert("Admin tomonidan imtihon yakunlandi.");
+      onFinish({
+        reason: 'Admin tomonidan imtihon yakunlandi.',
+        score: null,
+        totalQuestions: questions.length,
+      });
+    });
+
+    socket.on('control:delete', ({ identity: targetIdentity }) => {
+      if (targetIdentity !== identity) {
+        return;
+      }
+
+      finishedRef.current = true;
+      socket.emit('participant:leave', { identity });
+    });
+
+    const snapshotInterval = window.setInterval(() => {
+      if (!webcamRef.current) {
+        console.log('[exam] webcam ref missing');
+        return;
+      }
+
+      const screenshot = captureFrame(webcamRef);
+      console.log('[exam] snapshot tick', {
+        identity,
+        hasScreenshot: Boolean(screenshot),
+        length: screenshot ? screenshot.length : 0,
+      });
+
+      socket.emit('participant:snapshot', {
+        ...basePayload,
+        snapshot: screenshot || '',
+        status: 'in_progress',
+      });
+      console.log('[exam] snapshot emitted');
+    }, 2000);
+
+    return () => {
+      window.clearInterval(snapshotInterval);
+      socket.emit('participant:leave', { identity });
+      console.log('[exam] participant left', { identity });
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [identity, onFinish, user.name, user.phone, user.surname]);
 
   const handleAnswerSelect = (index) => {
     if (isAnswered) return;
@@ -234,9 +363,18 @@ const Exam = ({ user, onFinish }) => {
         <div className="webcam-section">
           <div className="webcam-section__header">
             <h3>Kamera nazorati</h3>
-            <span className="webcam-status">Live</span>
+            <span className="webcam-status">{isCameraReady ? 'Live' : 'Kutmoqda'}</span>
           </div>
-          <Webcam ref={webcamRef} audio={false} screenshotFormat="image/jpeg" videoConstraints={{ width: 320, height: 240 }} className="webcam" />
+          <Webcam
+            ref={webcamRef}
+            audio={false}
+            screenshotFormat="image/jpeg"
+            forceScreenshotSourceSize
+            videoConstraints={{ width: 320, height: 240 }}
+            className="webcam"
+            onUserMedia={() => setIsCameraReady(true)}
+            onUserMediaError={() => setIsCameraReady(false)}
+          />
           <p>Kamera: Siz ko'rinib turishingiz kerak</p>
         </div>
 

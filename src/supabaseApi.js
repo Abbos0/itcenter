@@ -1,13 +1,11 @@
-const SUPABASE_URL = 'https://mjbhddbyapjkojgdqygb.supabase.co';
-const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_IWQZbXuWTNqZQl9q3tNqBA_Hk16RI7W';
-const EXAM_SESSIONS_ENDPOINT = `${SUPABASE_URL}/rest/v1/exam_sessions`;
+import { LIVE_BACKEND_URL } from './liveBackend';
+
+const EXAM_SESSIONS_ENDPOINT = `${LIVE_BACKEND_URL}/api/sessions`;
 
 const request = async (path = '', options = {}) => {
   const response = await fetch(`${EXAM_SESSIONS_ENDPOINT}${path}`, {
     ...options,
     headers: {
-      apikey: SUPABASE_PUBLISHABLE_KEY,
-      Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
       'Content-Type': 'application/json',
       ...(options.headers || {}),
     },
@@ -26,31 +24,25 @@ const request = async (path = '', options = {}) => {
 };
 
 export const upsertExamSession = async (payload) =>
-  request('?on_conflict=identity_key', {
+  request('', {
     method: 'POST',
-    headers: {
-      Prefer: 'resolution=merge-duplicates,return=representation',
-    },
     body: JSON.stringify(payload),
   });
 
 export const fetchExamSessions = async () =>
-  request('?select=*&order=updated_at.desc', {
+  request('', {
     method: 'GET',
   });
 
 export const fetchExamSessionByIdentity = async (identityKey) => {
-  const data = await request(`?select=*&identity_key=eq.${encodeURIComponent(identityKey)}&limit=1`, {
+  const data = await request(`/${encodeURIComponent(identityKey)}`, {
     method: 'GET',
   });
 
-  return Array.isArray(data) && data.length ? data[0] : null;
+  return data;
 };
 
 export const deleteExamSessionByIdentity = async (identityKey) =>
-  request(`?identity_key=eq.${encodeURIComponent(identityKey)}`, {
+  request(`/${encodeURIComponent(identityKey)}`, {
     method: 'DELETE',
-    headers: {
-      Prefer: 'return=minimal',
-    },
   });
