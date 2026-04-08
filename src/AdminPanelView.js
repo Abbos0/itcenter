@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import './AdminPanelView.css';
 import { deleteExamSessionByIdentity, fetchExamSessions, upsertExamSession } from './supabaseApi';
 import { io } from 'socket.io-client';
@@ -59,6 +59,7 @@ const socketOptions = {
 function AdminPanelView() {
   const [sessions, setSessions] = useState([]);
   const [liveSessions, setLiveSessions] = useState([]);
+  const socketRef = useRef(null);
   const [credentials, setCredentials] = useState(() => readCredentials());
   const [isAuthenticated, setIsAuthenticated] = useState(() => readJson(ADMIN_AUTH_SESSION_KEY, false) === true);
   const [loginForm, setLoginForm] = useState({ login: '', password: '' });
@@ -112,6 +113,7 @@ function AdminPanelView() {
     }
 
     const socket = io(LIVE_BACKEND_URL, socketOptions);
+    socketRef.current = socket;
 
     socket.on('live:sessions', (items) => {
       console.log('[admin] live sessions received', items);
@@ -124,6 +126,7 @@ function AdminPanelView() {
 
     return () => {
       console.log('[admin] socket disconnected');
+      socketRef.current = null;
       socket.disconnect();
     };
   }, [isAuthenticated]);
@@ -152,8 +155,29 @@ function AdminPanelView() {
     return Array.from(merged.values()).sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
   }, [liveSessions, sessions]);
 
+  const activeLiveSessions = useMemo(
+    () =>
+      liveSessions
+        .filter((item) => item.connected !== false)
+        .map((item) => {
+          const previous = sessions.find((session) => session.identity === item.identity) || {};
+          return {
+            ...previous,
+            identity: item.identity,
+            name: item.name || previous.name || '',
+            surname: item.surname || previous.surname || '',
+            phone: item.phone || previous.phone || '',
+            status: item.status || previous.status || 'in_progress',
+            snapshot: item.snapshot || previous.snapshot || '',
+            updatedAt: item.updatedAt || previous.updatedAt || new Date().toISOString(),
+          };
+        })
+        .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0)),
+    [liveSessions, sessions]
+  );
+
   const stats = useMemo(() => {
-    const active = mergedSessions.filter((item) => item.status === 'in_progress').length;
+    const active = activeLiveSessions.length;
     const completed = mergedSessions.filter((item) => item.status === 'completed').length;
     const interrupted = mergedSessions.filter((item) => item.status === 'terminated' || item.status === 'force_ended').length;
     const scored = mergedSessions.filter((item) => typeof item.score === 'number');
@@ -168,7 +192,7 @@ function AdminPanelView() {
       interrupted,
       averageScore,
     };
-  }, [mergedSessions]);
+  }, [activeLiveSessions.length, mergedSessions]);
 
   const handleTerminate = (identity) => {
     const currentSession = mergedSessions.find((item) => item.identity === identity);
@@ -178,9 +202,7 @@ function AdminPanelView() {
       return;
     }
 
-    const socket = io(LIVE_BACKEND_URL, socketOptions);
-    socket.emit('admin:terminate', { identity });
-    socket.disconnect();
+    socketRef.current?.emit('admin:terminate', { identity });
     console.log('[admin] terminate emitted', { identity });
 
     setSessions((current) =>
@@ -238,9 +260,7 @@ function AdminPanelView() {
     }
 
     try {
-      const socket = io(LIVE_BACKEND_URL, socketOptions);
-      socket.emit('admin:delete', { identity });
-      socket.disconnect();
+      socketRef.current?.emit('admin:delete', { identity });
       console.log('[admin] delete emitted', { identity });
       await deleteExamSessionByIdentity(identity);
       setSessions((current) => current.filter((item) => item.identity !== identity));
@@ -450,8 +470,8 @@ function AdminPanelView() {
         <p className="admin-view__eyebrow">Admin panel</p>
         <h1>Barcha qatnashuvchilar nazorati</h1>
         <p>
-          Shu sahifa asosiy sayt ichida ishlaydi. Shuning uchun testga kirgan foydalanuvchilar darhol shu yerda
-          ko&apos;rinadi.
+          Tepadagi jadvalda faqat hozir jonli qatnashayotganlar chiqadi. Pastdagi jadvalda esa bazadagi barcha
+          yozuvlar saqlanadi.
         </p>
       </section>
 
@@ -482,11 +502,11 @@ function AdminPanelView() {
         <div className="admin-table-card__head">
           <div>
             <h2>Jonli qatnashuvchilar</h2>
-            <p>{mergedSessions.length} ta yozuv</p>
+            <p>{activeLiveSessions.length} ta jonli qatnashuvchi</p>
           </div>
         </div>
 
-        {mergedSessions.length ? (
+        {activeLiveSessions.length ? (
           <div className="admin-table-wrap">
             <table className="admin-table">
               <thead>
@@ -501,7 +521,7 @@ function AdminPanelView() {
                 </tr>
               </thead>
               <tbody>
-                {mergedSessions.map((item) => (
+                {activeLiveSessions.map((item) => (
                   <tr key={item.identity}>
                     <td>
                       <strong>{item.name} {item.surname}</strong>
@@ -550,8 +570,86 @@ function AdminPanelView() {
           </div>
         ) : (
           <div className="admin-empty">
-            <h3>Hozircha qatnashuvchi yo&apos;q</h3>
-            <p>Foydalanuvchi testga kirishni boshlashi bilan shu yerda chiqadi.</p>
+            <h3>Hozircha jonli qatnashuvchi yo&apos;q</h3>
+            <p>Foydalanuvchi testni boshlab `Exam` bosqichiga kirsa, shu yerda darhol ko&apos;rinadi.</p>
+          </div>
+        )}
+      </section>
+
+      <section className="admin-table-card">
+        <div className="admin-table-card__head">
+          <div>
+            <h2>Barcha yozuvlar</h2>
+            <p>{mergedSessions.length} ta jami yozuv</p>
+          </div>
+        </div>
+
+        {mergedSessions.length ? (
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Ism familiya</th>
+                  <th>Kamera</th>
+                  <th>Telefon</th>
+                  <th>Holat</th>
+                  <th>Natija</th>
+                  <th>Yangilandi</th>
+                  <th>Amal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {mergedSessions.map((item) => (
+                  <tr key={`archive-${item.identity}`}>
+                    <td>
+                      <strong>{item.name} {item.surname}</strong>
+                    </td>
+                    <td>
+                      {item.snapshot ? (
+                        <img className="admin-camera-preview" src={item.snapshot} alt={`${item.name} ${item.surname}`} />
+                      ) : (
+                        <span className="admin-muted">Kamera oqimi yo&apos;q</span>
+                      )}
+                    </td>
+                    <td>{item.phone || 'Kiritilmagan'}</td>
+                    <td>
+                      <span className={`admin-status admin-status--${item.status}`}>
+                        {statusLabels[item.status] || item.status}
+                      </span>
+                    </td>
+                    <td>
+                      {typeof item.score === 'number' && typeof item.totalQuestions === 'number'
+                        ? `${item.score}/${item.totalQuestions}`
+                        : '-'}
+                    </td>
+                    <td>{item.updatedAt ? new Date(item.updatedAt).toLocaleString() : '-'}</td>
+                    <td>
+                      <div className="admin-actions">
+                        {item.status === 'in_progress' ? (
+                          <button className="admin-danger" type="button" onClick={() => handleTerminate(item.identity)}>
+                            Yakunlash
+                          </button>
+                        ) : (
+                          <span className="admin-muted">Amal yo&apos;q</span>
+                        )}
+                        {deletableStatuses.has(item.status) ? (
+                          <button className="admin-delete" type="button" onClick={() => handleDelete(item.identity)}>
+                            Delete
+                          </button>
+                        ) : (
+                          <span className="admin-muted">Delete yopiq</span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="admin-empty">
+            <h3>Hozircha yozuv yo&apos;q</h3>
+            <p>Test sessiyalari paydo bo&apos;lishi bilan shu yerda saqlanadi.</p>
           </div>
         )}
       </section>
