@@ -51,6 +51,7 @@ const statusLabels = {
 };
 
 const deletableStatuses = new Set(['completed', 'blocked', 'terminated', 'force_ended']);
+const activeStatuses = new Set(['face', 'phone', 'instructions', 'in_progress']);
 const socketOptions = {
   transports: ['polling'],
   upgrade: false,
@@ -156,23 +157,43 @@ function AdminPanelView() {
   }, [liveSessions, sessions]);
 
   const activeLiveSessions = useMemo(
-    () =>
-      liveSessions
-        .filter((item) => item.connected !== false)
-        .map((item) => {
-          const previous = sessions.find((session) => session.identity === item.identity) || {};
-          return {
-            ...previous,
-            identity: item.identity,
-            name: item.name || previous.name || '',
-            surname: item.surname || previous.surname || '',
-            phone: item.phone || previous.phone || '',
-            status: item.status || previous.status || 'in_progress',
-            snapshot: item.snapshot || previous.snapshot || '',
-            updatedAt: item.updatedAt || previous.updatedAt || new Date().toISOString(),
-          };
-        })
-        .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0)),
+    () => {
+      const merged = new Map();
+
+      sessions.forEach((session) => {
+        if (!activeStatuses.has(session.status)) {
+          return;
+        }
+
+        merged.set(session.identity, {
+          ...session,
+          connected: false,
+        });
+      });
+
+      liveSessions.forEach((item) => {
+        const previous = merged.get(item.identity) || sessions.find((session) => session.identity === item.identity) || {};
+        const nextStatus = item.status || previous.status || 'in_progress';
+
+        if (!activeStatuses.has(nextStatus) && item.connected === false) {
+          return;
+        }
+
+        merged.set(item.identity, {
+          ...previous,
+          identity: item.identity,
+          name: item.name || previous.name || '',
+          surname: item.surname || previous.surname || '',
+          phone: item.phone || previous.phone || '',
+          status: nextStatus,
+          snapshot: item.snapshot || previous.snapshot || '',
+          updatedAt: item.updatedAt || previous.updatedAt || new Date().toISOString(),
+          connected: item.connected !== false,
+        });
+      });
+
+      return Array.from(merged.values()).sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+    },
     [liveSessions, sessions]
   );
 
