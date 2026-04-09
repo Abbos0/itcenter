@@ -24,8 +24,8 @@
     }
   ],
   "env": {
-    "REACT_APP_SUPABASE_URL": "@supabase-url",
-    "REACT_APP_SUPABASE_ANON_KEY": "@supabase-anon-key",
-    "REACT_APP_LIVE_BACKEND_URL": "@backend-url"
+    "REACT_APP_SUPABASE_URL": "@supabase_url",
+    "REACT_APP_SUPABASE_ANON_KEY": "@supabase_anon_key",
+    "REACT_APP_LIVE_BACKEND_URL": "@backend_url"
   }
 }
