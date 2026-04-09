@@ -174,36 +174,47 @@ const normalizeIdentity = ({ name = '', surname = '' }) =>
   `${name.trim().toLocaleLowerCase()}::${surname.trim().toLocaleLowerCase()}`;
 
 const captureFrame = (webcamRef) => {
-  const directScreenshot = webcamRef.current?.getScreenshot?.();
+  try {
+    // Try to get the video element
+    const video = webcamRef.current?.video || document.querySelector('.webcam video') || document.querySelector('video');
 
-  if (directScreenshot) {
-    return directScreenshot;
-  }
+    if (!video || video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
+      console.log('[exam] video not ready', {
+        hasVideo: Boolean(video),
+        readyState: video?.readyState ?? null,
+        width: video?.videoWidth ?? 0,
+        height: video?.videoHeight ?? 0,
+      });
+      return '';
+    }
 
-  const video = webcamRef.current?.video || document.querySelector('.webcam');
+    // Create canvas and capture frame
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.min(video.videoWidth / 2, 160); // Smaller size for better performance
+    canvas.height = Math.min(video.videoHeight / 2, 120);
 
-  if (!video || video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
-    console.log('[exam] video not ready for capture', {
-      hasVideo: Boolean(video),
-      readyState: video?.readyState ?? null,
-      width: video?.videoWidth ?? 0,
-      height: video?.videoHeight ?? 0,
+    const context = canvas.getContext('2d');
+    if (!context) {
+      console.error('[exam] cannot get canvas context');
+      return '';
+    }
+
+    // Draw the video frame to canvas (scaled down)
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // Convert to data URL with lower quality
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+    console.log('[exam] captured frame', {
+      size: dataUrl.length,
+      dimensions: `${canvas.width}x${canvas.height}`,
+      urlStart: dataUrl.substring(0, 50)
     });
+
+    return dataUrl;
+  } catch (error) {
+    console.error('[exam] error capturing frame:', error);
     return '';
   }
-
-  const canvas = document.createElement('canvas');
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-
-  const context = canvas.getContext('2d');
-
-  if (!context) {
-    return '';
-  }
-
-  context.drawImage(video, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL('image/jpeg', 0.72);
 };
 
 const Exam = ({ user, onFinish }) => {
@@ -234,6 +245,25 @@ const Exam = ({ user, onFinish }) => {
       totalQuestions: questions.length,
     });
   }, [answers, identity, onFinish]);
+
+  const sendSnapshot = useCallback((socket, payload) => {
+    if (!socket?.connected) {
+      return;
+    }
+
+    const screenshot = captureFrame(webcamRef);
+    if (!screenshot) {
+      console.log('[exam] no screenshot available yet');
+      return;
+    }
+
+    socket.emit('participant:snapshot', {
+      ...payload,
+      snapshot: screenshot,
+      status: 'in_progress',
+    });
+    console.log('[exam] snapshot emitted', { identity, screenshotSize: screenshot.length });
+  }, [identity]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -266,6 +296,8 @@ const Exam = ({ user, onFinish }) => {
       console.log('[exam] socket connected', { identity, backend: LIVE_BACKEND_URL });
       socket.emit('participant:join', basePayload);
       console.log('[exam] participant joined', basePayload);
+      sendSnapshot(socket, basePayload);
+      window.setTimeout(() => sendSnapshot(socket, basePayload), 1200);
     });
 
     socket.on('control:terminate', ({ identity: targetIdentity }) => {
@@ -297,25 +329,12 @@ const Exam = ({ user, onFinish }) => {
     });
 
     const snapshotInterval = window.setInterval(() => {
-      if (!webcamRef.current) {
-        console.log('[exam] webcam ref missing');
+      if (!webcamRef.current || !socket.connected) {
         return;
       }
 
-      const screenshot = captureFrame(webcamRef);
-      console.log('[exam] snapshot tick', {
-        identity,
-        hasScreenshot: Boolean(screenshot),
-        length: screenshot ? screenshot.length : 0,
-      });
-
-      socket.emit('participant:snapshot', {
-        ...basePayload,
-        snapshot: screenshot || '',
-        status: 'in_progress',
-      });
-      console.log('[exam] snapshot emitted');
-    }, 2000);
+      sendSnapshot(socket, basePayload);
+    }, 4000);
 
     return () => {
       window.clearInterval(snapshotInterval);
@@ -324,7 +343,23 @@ const Exam = ({ user, onFinish }) => {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [identity, onFinish, user.name, user.phone, user.surname]);
+  }, [identity, onFinish, sendSnapshot, user.name, user.phone, user.surname]);
+
+  useEffect(() => {
+    if (!socketRef.current?.connected || !isCameraReady) {
+      return;
+    }
+
+    const payload = {
+      identity,
+      name: user.name,
+      surname: user.surname,
+      phone: user.phone || '',
+      status: 'in_progress',
+    };
+
+    sendSnapshot(socketRef.current, payload);
+  }, [identity, isCameraReady, sendSnapshot, user.name, user.phone, user.surname]);
 
   const handleAnswerSelect = (index) => {
     if (isAnswered) return;
@@ -369,7 +404,6 @@ const Exam = ({ user, onFinish }) => {
             ref={webcamRef}
             audio={false}
             screenshotFormat="image/jpeg"
-            forceScreenshotSourceSize
             videoConstraints={{ width: 320, height: 240 }}
             className="webcam"
             onUserMedia={() => setIsCameraReady(true)}

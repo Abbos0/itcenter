@@ -150,6 +150,8 @@ app.delete('/api/sessions/:identity', async (req, res) => {
 });
 
 io.on('connection', (socket) => {
+  socket.emit('live:sessions', serializeSessions());
+
   socket.on('participant:join', (payload) => {
     upsertSession({ ...payload, connected: true }, socket.id);
   });
