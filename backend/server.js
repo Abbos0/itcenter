@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
@@ -20,8 +22,8 @@ const io = new Server(server, {
 
 const participantSockets = new Map();
 const liveSessions = new Map();
-const SUPABASE_URL = 'https://mjbhddbyapjkojgdqygb.supabase.co';
-const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_IWQZbXuWTNqZQl9q3tNqBA_Hk16RI7W';
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://mjbhddbyapjkojgdqygb.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_IWQZbXuWTNqZQl9q3tNqBA_Hk16RI7W';
 const EXAM_SESSIONS_ENDPOINT = `${SUPABASE_URL}/rest/v1/exam_sessions`;
 
 const serializeSessions = () =>
@@ -89,6 +91,10 @@ const removeSession = (identity) => {
   liveSessions.delete(identity);
   broadcastSessions();
 };
+
+app.get('/', (_req, res) => {
+  res.send('ITCenter backend is running. Use /api/sessions or /health.');
+});
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true, sessions: serializeSessions().length });

@@ -1,12 +1,31 @@
 {
-  "experimentalServices": {
-    "frontend": {
-      "routePrefix": "/",
-      "framework": "create-react-app"
-    },
-    "backend": {
-      "entrypoint": "backend",
-      "routePrefix": "/_/backend"
+  "version": 2,
+  "builds": [
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "build"
+      }
     }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "https://itcenter-puso.onrender.com/api/$1"
+    },
+    {
+      "src": "/socket.io/(.*)",
+      "dest": "https://itcenter-puso.onrender.com/socket.io/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ],
+  "env": {
+    "REACT_APP_SUPABASE_URL": "@supabase-url",
+    "REACT_APP_SUPABASE_ANON_KEY": "@supabase-anon-key",
+    "REACT_APP_LIVE_BACKEND_URL": "@backend-url"
   }
 }
